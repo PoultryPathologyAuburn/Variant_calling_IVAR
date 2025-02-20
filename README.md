@@ -1,7 +1,7 @@
 # Genomic Variants Analysis of LoNDVs from Wild Birds Using IVAR 
 
 ### Project Description
-This project aims to analyze genomic variants (SNPs and indels) in low pathogenic Newcastle Disease Virus (LoNDV) isolates from wild birds using the IVAR software. The study focuses on identifying genetic changes that occur during viral adaptation in chicken embryos.
+This project aims to analyze genomic variants (SNPs and indels) in low pathogenic Newcastle Disease Virus (LoNDV) isolates from wild birds by passaging in chicken embryo using the IVAR software. The study focuses on identifying genetic changes that occur during viral adaptation in chicken embryos.
 
 ### Software and Tools Used and Pipeline Overview 
 - FASTQC(v/0.11.9) – Quality control of sequencing data
