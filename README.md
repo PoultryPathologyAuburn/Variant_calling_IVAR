@@ -1,40 +1,51 @@
-# Genomic Variants Analysis of LoNDVs from Wild Birds Using IVAR 
 
-### Project Description
-This project aims to analyze genomic variants (SNPs and indels) in low pathogenic Newcastle Disease Virus (LoNDV) isolates from wild birds by passaging in chicken embryo using the IVAR software. The study focuses on identifying genetic changes that occur during viral adaptation in chicken embryos.
+# Genomic Variants Analysis of LoNDVs from Wild Birds Using iVar
 
-### Software and Tools Used and Pipeline Overview 
-- FASTQC(v/0.11.9) – Quality control of sequencing data
-- Trimmomatic (v0.39)- Perform trimming
-- BWA (v0.7.12)– Perform alignment 
-- Samtools (v1.13)– BAM file processing
-- IVAR (v1.4.3) – Variant calling and filtering
-- R – Data processing and visualization
+## Project Description
 
-### Pipeline Overview
-The following pipeline was used for variant analysis:
+This project aims to analyze genomic variants (SNPs and indels) in low pathogenic Newcastle Disease Virus (LoNDV) isolates from wild birds after passaging in chicken embryos using the iVar software. The study focuses on identifying genetic changes that occur during viral adaptation in chicken embryos.
+
+---
+
+## Software and Tools Used
+
+- FastQC (v0.11.9) – Quality control of sequencing data  
+- Trimmomatic (v0.39) – Adapter and quality trimming  
+- BWA (v0.7.12) – Read alignment  
+- Samtools (v1.13) – BAM file processing  
+- iVar (v1.4.3) – Variant calling and filtering  
+- R – Data processing and visualization  
+
+---
+
+## Pipeline Overview
 
 1. **Quality Control (QC) of Raw Reads**
-   Performed using FastQC
+   - Performed using FastQC
+
 2. **Trimming**
-   Adapter trimming using Trimmomatic
-   Alignment to Reference Genome (LaSota AF077761)
+   - Adapter trimming using Trimmomatic
+   - Alignment to reference genome (LaSota AF077761)
+
 3. **Alignment**
-   Aligned reads using Bowtie2/Hisat2/BWA
-   Converted to BAM format using Samtools
-   Sorted and indexed BAM files
+   - Reads aligned using Bowtie2 / Hisat2 / BWA
+   - Converted to BAM format using Samtools
+   - Sorted and indexed BAM files
+
 4. **Variant Calling**
-   Variant Calling with IVAR
-   Used ivar variants for SNP/Indel calling
-   IVAR filtering parameters: minimum quality(Default: 20) and minimum      frequency(Default: 0.03)
-5. **Data Visualization and Interpretation**
-   Data Visualization and Interpretation were done using R which includes:
+   - Variant calling performed using iVar
+   - Used `ivar variants` for SNP/Indel calling
+   - Filtering parameters:
+     - Minimum base quality: 20
+     - Minimum allele frequency: 0.03
+
+5. **Data Visualization and Interpretation (R)**
    - Total shared SNPs between P1 and P10, unique P1 and P10 SNPs
-   - Generated genomic distribution plots of SNPs between P1 and P10
-   - Total shared SNPs between P1 and P10, unique P1 and P10 indels
-   - Generated genomic distribution plots of indels between P1 and P10
-   - Total shared nSNPs between P1 and P10, unique P1 and P10 nSNPs
-   - Change in frequency in nSNPs during P1 to P10 transition
+   - Genomic distribution plots of SNPs
+   - Total shared and unique indels between P1 and P10
+   - Genomic distribution plots of indels
+   - Total shared and unique nSNPs between P1 and P10
+   - Change in frequency of nSNPs from P1 → P10
 
 ---
 
@@ -52,17 +63,6 @@ Variant_calling_IVAR/
 ├── R_script/
 ├── Script/
 └── README.md
-
-
----
-
-### Scroll down → Click **Commit changes**
-
----
-
-##  Why this works (important)
-
-- The code block **starts** with  
 
 
 
