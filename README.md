@@ -53,6 +53,9 @@ Variant_calling_IVAR/
 ├── Script/
 └── README.md
 
+---
+
+## 5. Your section should look like this (copy and compare):
 
 
 ### Folder Description
