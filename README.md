@@ -61,8 +61,6 @@ Variant_calling_IVAR/
 │   │   └── Superscript_meandensities_SNPs_nSNPs.R
 │   ├── ncbi.sh
 │   └── updatetrim.sh
-├── R_script/
-├── Script/
 └── README.md
 ```
 ---
