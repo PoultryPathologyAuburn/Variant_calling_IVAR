@@ -36,19 +36,26 @@ The following pipeline was used for variant analysis:
    - Total shared nSNPs between P1 and P10, unique P1 and P10 nSNPs
    - Change in frequency in nSNPs during P1 to P10 transition
 
+---
 
-## 📁 Repository Structure
+## Repository Structure
+
+```text
 Variant_calling_IVAR/
 ├── Project1_variant_calling_github/
-│ ├── Rcode_analysis/
-│ │ ├── HNcodon_495_analysis.R
-│ │ ├── Project1analysis.R
-│ │ └── Superscript_meandensities_SNPs_nSNPs.R
-│ ├── ncbi.sh
-│ └── updatetrim.sh
+│   ├── Rcode_analysis/
+│   │   ├── HNcodon_495_analysis.R
+│   │   ├── Project1analysis.R
+│   │   └── Superscript_meandensities_SNPs_nSNPs.R
+│   ├── ncbi.sh
+│   └── updatetrim.sh
+├── R_script/
+├── Script/
+└── README.md
 
 
-### 📂 Folder Description
+
+### Folder Description
 
 - `Project1_variant_calling_github/`
   - Contains the main analysis pipeline for Project 1
