@@ -63,7 +63,8 @@ Variant_calling_IVAR/
 │   └── updatetrim.sh
 ├── R_script/
 ├── Script/
-└── README.md ```
+└── README.md
+```
 
 ---
 
