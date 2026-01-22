@@ -54,10 +54,6 @@ Variant_calling_IVAR/
 └── README.md
 ---
 
-
-## 5. Your section should look like this (copy and compare):
-
-
 ### Folder Description
 
 - `Project1_variant_calling_github/`
