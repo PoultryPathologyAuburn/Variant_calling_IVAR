@@ -49,10 +49,11 @@ This project aims to analyze genomic variants (SNPs and indels) in low pathogeni
 
 ---
 
-## Repository Structure
+## **Repository Structure**
 
 ```text
 Variant_calling_IVAR/
+...
 ├── Project1_variant_calling_github/
 │   ├── Rcode_analysis/
 │   │   ├── HNcodon_495_analysis.R
@@ -66,7 +67,7 @@ Variant_calling_IVAR/
 
 ---
 
-### Folder Description
+### **Folder Description**
 
 - `Project1_variant_calling_github/`
   - Contains the main analysis pipeline for Project 1
@@ -85,7 +86,7 @@ Variant_calling_IVAR/
 
 ---
 
-## Outputs
+## **Outputs**
 
 The pipeline generates:
 
@@ -102,11 +103,11 @@ The pipeline generates:
 
 ---
 
-##  Reference Genome
+##  **Reference Genome**
 
 - Newcastle Disease Virus LaSota strain  
   **Accession:** AF077761
 
-### References & Documentation
+### **References & Documentation**
 For more details on iVar commands and usage, refer to the official iVar documentation:
 (https://andersen-lab.github.io/ivar/html/manualpage.html)
