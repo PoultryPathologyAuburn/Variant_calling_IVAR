@@ -52,8 +52,8 @@ Variant_calling_IVAR/
 ├── R_script/
 ├── Script/
 └── README.md
-
 ---
+
 
 ## 5. Your section should look like this (copy and compare):
 
