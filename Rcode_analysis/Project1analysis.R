@@ -54,7 +54,7 @@ isolates <- names(iso_map)
 ## ---- Genomic region map (UTRs FIXED; coordinates UNCHANGED) ----
 region_map <- tribble(
   ~Region, ~Start, ~End,
-  "3'UTR", 1, 121,          # FIXED LABEL (was 5'UTR)
+  "3'UTR", 1, 121,          
   "NP", 122, 1591,
   "NP_P", 1592, 1886,
   "P", 1887, 3074,
@@ -66,7 +66,7 @@ region_map <- tribble(
   "HN", 6412, 8145,
   "HN_L", 8146, 8380,
   "L", 8381, 14995,
-  "5'UTR", 14996, 15073     # FIXED LABEL (was 3'UTR)
+  "5'UTR", 14996, 15073     
 )
 
 annotate_region <- function(pos) {
@@ -156,9 +156,8 @@ print(summary_counts)
 
 cat("\n===== CHUNK 2: Mean density stats (SNP + nSNP) =====\n")
 
-## Put Meandensity.xlsx inside the REPRO folder
 file_path <- file.path(repro_root, "Meandensity_Re.xlsx")
-out2_dir  <- out1_dir  # reuse Chunk 1 output folder
+out2_dir  <- out1_dir  
 
 if (!file.exists(file_path)) {
   warning(paste("Meandensity_Re.xlsx NOT found at:", file_path))
@@ -305,19 +304,17 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
   library(tidyr)
-  library(tibble)   # tribble()
+  library(tibble)  
   library(UpSetR)
   library(ggplot2)
 })
 
-## ---- PROJECT 1 PATHS ----
 setwd("~/Documents/aminoacidanalysis/bam/iVaroutput/parameterchange/M1try/Variants")
 data_dir <- getwd()
 
 repro_root <- file.path(getwd(), "REPRO_Project1_2026")
 dir.create(repro_root, showWarnings = FALSE)
 
-## ---- PROJECT 1 isolates (7) ----
 iso_map <- list(
   iso1  = "Iso1",
   iso5  = "Iso2",
@@ -329,10 +326,10 @@ iso_map <- list(
 )
 isolates <- names(iso_map)
 
-## ---- Region map (UTR labels FIXED; coordinates UNCHANGED) ----
+## ---- Region map 
 region_map <- tribble(
   ~Region, ~Start, ~End,
-  "3'UTR", 1, 121,          # FIXED (was 5'UTR)
+  "3'UTR", 1, 121,         
   "NP", 122, 1591,
   "NP_P", 1592, 1886,
   "P", 1887, 3074,
@@ -344,7 +341,7 @@ region_map <- tribble(
   "HN", 6412, 8145,
   "HN_L", 8146, 8380,
   "L", 8381, 14995,
-  "5'UTR", 14996, 15073     # FIXED (was 3'UTR)
+  "5'UTR", 14996, 15073     
 ) %>% mutate(Mid = (Start + End)/2)
 
 annotate_region <- function(pos) {

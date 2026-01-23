@@ -26,8 +26,8 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 alpha <- 0.05
 
-# ---- sheets to process (must match your workbook sheet names) ----
-# Keys = actual sheet names in Excel; Values = pretty label used in outputs
+
+
 sheet_map <- c(
   SharedSNPs     = "Shared_SNPs",
   UniqueP1SNPs   = "UniqueP1_SNPs",
@@ -37,7 +37,7 @@ sheet_map <- c(
   UniqueP10nSNPs = "UniqueP10_nSNPs"
 )
 
-# ---- helper: make long density table from Iso*_SD only (PROJECT 1 = Iso1..Iso7) ----
+
 to_long_sd <- function(df){
   need <- paste0("Iso", 1:7, "_SD")
   missing <- setdiff(need, names(df))

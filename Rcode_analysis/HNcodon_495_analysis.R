@@ -31,291 +31,12 @@
 #    - All observed codons
 #    - Not used for downstream analysis
 #
-# Interpretation guidance:
+# Interpretation:
 # - Focus primarily on *_aa_GE3pct.csv
 # - Compare results directly with iVar TSV variant calls
 # - Variants <3% are considered supportive but not primary
 #
 ############################################################
-
-
-
-suppressPackageStartupMessages({
-  library(Rsamtools)
-  library(GenomicAlignments)
-  library(Biostrings)
-  library(GenomicRanges)
-  library(dplyr)
-  library(readr)
-  library(tidyr)
-})
-
-# ============================================================
-# PROJECT 1 PATHS (UPDATED)
-# ============================================================
-project1_root <- "/Users/deepachaudhary/Documents/aminoacidanalysis/bam/iVaroutput/parameterchange/M1try/Variants"
-repro_root    <- file.path(project1_root, "REPRO_Project1_2026")
-
-# REF folder copied from ASC
-ref_dir <- file.path(repro_root, "Ref")
-
-# BAM folder (Project 1)
-aligned_dir <- "/Users/deepachaudhary/Documents/aminoacidanalysis/bam/iVaroutput/parameterchange/M1try/WIld_birds_Project1_BAMs"
-
-# Output folder
-out_dir <- file.path(repro_root, "CodonAA_7894_7896_Q30")
-dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-
-# =========================
-# EDIT THESE PER SAMPLE
-# =========================
-bam_file    <- "iso10p1.sorted.bam"   # e.g., "iso3p10.sorted.bam"
-sample_name <- "Iso10P1"              # label used in outputs
-# =========================
-
-bam_path <- file.path(aligned_dir, bam_file)
-
-# ---- site & thresholds ----
-codon_pos       <- c(7894L, 7895L, 7896L)
-min_baseq       <- 30L
-ivar_threshold  <- 3    # %  (matches iVar)
-supp_min        <- 1    # %  (supplementary)
-supp_max        <- 3    # %  (supplementary upper bound, exclusive)
-
-# ============================================================
-# Helpers
-# ============================================================
-`%||%` <- function(x, y) if (is.null(x) || is.na(x)) y else x
-
-codon2aa <- function(codon){
-  cc <- toupper(gsub("U","T", codon))
-  aa <- GENETIC_CODE[as.character(DNAStringSet(cc))]
-  ifelse(is.na(aa), "X", aa)
-}
-
-# pick contig name from BAM header (does NOT require ref fasta)
-pick_chrom <- function(bam){
-  hdr <- scanBamHeader(bam)[[1]]$targets
-  chs <- names(hdr)
-  
-  cand <- chs[grepl("^AF077761(\\.|$)", chs)]
-  if (length(cand)) return(cand[1])
-  
-  cand <- chs[grepl("LaSota|AF077761|NC_", chs, ignore.case=TRUE)]
-  if (length(cand)) return(cand[1])
-  
-  chs[1]
-}
-
-ref_to_read_pos <- function(read_start, cigar, ref_pos_vec){
-  if (is.na(cigar) || cigar=="*" || length(cigar)==0) return(rep(NA_integer_, length(ref_pos_vec)))
-  cigar_chr <- as.character(cigar)[1]
-  
-  ops  <- explodeCigarOps(cigar_chr); if (is.list(ops))  ops  <- unlist(ops,  use.names=FALSE)
-  lens <- explodeCigarOpLengths(cigar_chr); if (is.list(lens)) lens <- unlist(lens, use.names=FALSE)
-  lens <- as.integer(lens)
-  
-  if (length(ops)!=length(lens)) return(rep(NA_integer_, length(ref_pos_vec)))
-  
-  ref_cur  <- as.integer(read_start)[1]
-  read_cur <- 1L
-  out      <- rep(NA_integer_, length(ref_pos_vec))
-  
-  for (k in seq_along(ops)){
-    op <- ops[k]; len <- lens[k]
-    if (is.na(len) || len<=0L) next
-    
-    if (op %in% c("M","=","X")){
-      ref_start <- ref_cur
-      ref_end   <- ref_cur + len - 1L
-      hit <- (ref_pos_vec>=ref_start) & (ref_pos_vec<=ref_end) & is.na(out)
-      if (any(hit)){
-        off <- ref_pos_vec[hit] - ref_start
-        out[hit] <- read_cur + off
-      }
-      ref_cur  <- ref_cur + len
-      read_cur <- read_cur + len
-      
-    } else if (op=="I"){
-      read_cur <- read_cur + len
-    } else if (op %in% c("D","N")){
-      ref_cur  <- ref_cur  + len
-    } else if (op=="S"){
-      read_cur <- read_cur + len
-    }
-  }
-  out
-}
-
-read_codon <- function(seq_str, qual_raw, read_pos_idx, min_baseq=30L){
-  if (any(is.na(read_pos_idx))) return(NA_character_)
-  n <- nchar(seq_str)
-  if (any(read_pos_idx<1L) || any(read_pos_idx>n)) return(NA_character_)
-  
-  q <- tryCatch({
-    if (is.raw(qual_raw)) as.integer(qual_raw)
-    else if (inherits(qual_raw, "XStringQuality")) as.integer(quality(qual_raw))
-    else as.integer(qual_raw)
-  }, error=function(...) rep(40L, n))
-  
-  bases <- substring(seq_str, read_pos_idx, read_pos_idx)
-  if (any(q[read_pos_idx] < min_baseq) || any(toupper(bases) %in% "N")) return(NA_character_)
-  
-  toupper(paste0(bases, collapse=""))
-}
-
-count_codons_bam <- function(bam_path, chrom, codon_pos, min_baseq=30L,
-                             skip_secondary=TRUE, skip_supplementary=TRUE, skip_qc_fail=TRUE){
-  
-  rng <- GRanges(seqnames=chrom, ranges=IRanges(min(codon_pos), max(codon_pos)))
-  param <- ScanBamParam(which=rng, what=c("pos","cigar","seq","qual","flag"))
-  x <- scanBam(bam_path, param=param)[[1]]
-  
-  if (length(x$pos)==0) return(list(counts=integer(), used=0L))
-  
-  flag <- x$flag
-  keep <- rep(TRUE, length(flag))
-  if (skip_secondary)     keep <- keep & (bitwAnd(flag, 0x100)==0)
-  if (skip_supplementary) keep <- keep & (bitwAnd(flag, 0x800)==0)
-  if (skip_qc_fail)       keep <- keep & (bitwAnd(flag, 0x200)==0)
-  
-  pos   <- x$pos[keep]
-  cig   <- x$cigar[keep]
-  seqs  <- as.character(x$seq[keep])
-  quals <- x$qual[keep]
-  
-  used <- 0L
-  tab  <- integer(); names(tab) <- character()
-  
-  for (i in seq_along(pos)){
-    if (is.na(cig[i]) || cig[i]=="*") next
-    rpos <- ref_to_read_pos(pos[i], cig[i], codon_pos)
-    cod  <- read_codon(seqs[i], quals[[i]], rpos, min_baseq)
-    if (is.na(cod)) next
-    used <- used + 1L
-    tab[cod] <- (tab[cod] %||% 0L) + 1L
-  }
-  
-  list(counts=tab, used=used)
-}
-
-# ============================================================
-# REF detection + checks
-# ============================================================
-if (!dir.exists(repro_root)) stop("repro_root not found: ", repro_root)
-if (!dir.exists(ref_dir))    stop("Ref folder not found: ", ref_dir)
-
-# Auto-detect a fasta in Ref folder
-ref_candidates <- list.files(ref_dir, pattern="\\.(fa|fasta|fna)$", full.names=TRUE, ignore.case=TRUE)
-if (length(ref_candidates) == 0) {
-  stop("No fasta found in Ref folder: ", ref_dir,
-       "\nPut your reference fasta there (the one used for variant calling).")
-}
-ref_fa <- ref_candidates[1]
-
-# Check ref index exists (samtools faidx creates .fai)
-if (!file.exists(paste0(ref_fa, ".fai"))) {
-  stop("Reference .fai not found: ", paste0(ref_fa, ".fai"),
-       "\nRun in Terminal:\n  samtools faidx ", shQuote(ref_fa))
-}
-
-# BAM checks
-if (!file.exists(bam_path)) stop("BAM not found: ", bam_path)
-if (!file.exists(paste0(bam_path, ".bai"))) stop("BAM index (.bai) not found: ", paste0(bam_path, ".bai"))
-
-# ============================================================
-# Run
-# ============================================================
-chrom <- pick_chrom(bam_path)
-message("Using chromosome/contig: ", chrom)
-message("Using REF fasta: ", ref_fa)
-message("Using BAM: ", bam_path)
-
-res <- count_codons_bam(bam_path, chrom, codon_pos, min_baseq)
-if (res$used == 0L) stop("No reads covering all three codon positions with baseQ >= ", min_baseq)
-
-codon_counts <- res$counts
-reads_used   <- res$used
-
-# ---- ALL ----
-codon_tbl_all <- tibble(
-  Sample     = sample_name,
-  Codon      = names(codon_counts),
-  AA         = codon2aa(names(codon_counts)),
-  Reads      = as.integer(codon_counts),
-  Reads_used = reads_used
-) %>%
-  mutate(Percent = round(100 * Reads / Reads_used, 4)) %>%
-  arrange(desc(Reads))
-
-aa_tbl_all <- codon_tbl_all %>%
-  group_by(Sample, AA) %>%
-  summarise(
-    Reads      = sum(Reads),
-    Reads_used = dplyr::first(Reads_used),
-    .groups="drop"
-  ) %>%
-  mutate(Percent = round(100 * Reads / Reads_used, 4)) %>%
-  arrange(desc(Reads))
-
-# ---- ≥3% (iVar-matched) ----
-codon_tbl_ge3 <- codon_tbl_all %>% filter(Percent >= ivar_threshold)
-aa_tbl_ge3 <- codon_tbl_ge3 %>%
-  group_by(Sample, AA) %>%
-  summarise(Reads = sum(Reads), Reads_used = dplyr::first(Reads_used), .groups="drop") %>%
-  mutate(Percent = round(100 * Reads / Reads_used, 4)) %>%
-  arrange(desc(Reads))
-
-# ---- 1–3% (supplementary) ----
-codon_tbl_1to3 <- codon_tbl_all %>% filter(Percent >= supp_min, Percent < supp_max)
-aa_tbl_1to3 <- codon_tbl_1to3 %>%
-  group_by(Sample, AA) %>%
-  summarise(Reads = sum(Reads), Reads_used = dplyr::first(Reads_used), .groups="drop") %>%
-  mutate(Percent = round(100 * Reads / Reads_used, 4)) %>%
-  arrange(desc(Reads))
-
-# ---- write ----
-pos_tag <- paste(codon_pos, collapse="_")
-prefix  <- file.path(out_dir, paste0(sample_name, "_", pos_tag, "_Q", min_baseq))
-
-write_csv(codon_tbl_all,  paste0(prefix, "_codon_ALL.csv"))
-write_csv(aa_tbl_all,     paste0(prefix, "_aa_ALL.csv"))
-write_csv(codon_tbl_ge3,  paste0(prefix, "_codon_GE3pct.csv"))
-write_csv(aa_tbl_ge3,     paste0(prefix, "_aa_GE3pct.csv"))
-write_csv(codon_tbl_1to3, paste0(prefix, "_codon_1to3pct.csv"))
-write_csv(aa_tbl_1to3,    paste0(prefix, "_aa_1to3pct.csv"))
-
-cat(
-  "\n✓ Wrote:\n",
-  "  - ", paste0(prefix, "_codon_ALL.csv"), "\n",
-  "  - ", paste0(prefix, "_aa_ALL.csv"), "\n",
-  "  - ", paste0(prefix, "_codon_GE3pct.csv"), "\n",
-  "  - ", paste0(prefix, "_aa_GE3pct.csv"), "\n",
-  "  - ", paste0(prefix, "_codon_1to3pct.csv"), "\n",
-  "  - ", paste0(prefix, "_aa_1to3pct.csv"), "\n\n",
-  "(Project1 root: ", project1_root, ")\n",
-  "(Repro root: ", repro_root, ")\n",
-  "(REF: ", ref_fa, ")\n",
-  "(BAM: ", bam_path, ")\n",
-  sep = ""
-)
-
-# Print tables to console too (optional)
-print(codon_tbl_all)
-print(aa_tbl_all)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 suppressPackageStartupMessages({
   library(Rsamtools)
@@ -333,11 +54,10 @@ suppressPackageStartupMessages({
 # ============================================================
 project1_root <- "/Users/deepachaudhary/Documents/aminoacidanalysis/bam/iVaroutput/parameterchange/M1try/Variants"
 
-# Repro folder (where you copied Ref from ASC)
+
 repro_root <- file.path(project1_root, "REPRO_Project1_2026")
 
-# REF used for variant calling (copied from ASC into your laptop)
-# ✅ Update the fasta name here if your file is not exactly "LaSota.fasta"
+# REF used for variant calling 
 ref_fa <- file.path(repro_root, "Ref", "LaSota.fasta")
 
 # BAM directory (Project 1)
@@ -359,7 +79,7 @@ supp_max       <- 3                       # %  (supplementary upper bound, exclu
 # ============================================================
 # OUTPUT ORGANIZATION (folders)
 # ============================================================
-main_dir  <- file.path(out_dir, "MAIN_RESULTS")           # ⭐ use this
+main_dir  <- file.path(out_dir, "MAIN_RESULTS")           
 supp_dir  <- file.path(out_dir, "SUPPLEMENTARY_1to3pct")  # often empty
 all_dir   <- file.path(out_dir, "ALL_READS_QC")           # QC only
 codon_dir <- file.path(out_dir, "CODON_SUPPORT")          # codon evidence
@@ -369,7 +89,6 @@ dir.create(supp_dir,  showWarnings = FALSE)
 dir.create(all_dir,   showWarnings = FALSE)
 dir.create(codon_dir, showWarnings = FALSE)
 
-# README note so you remember what to use
 writeLines(
   c(
     "Codon/AA validation at nt 7894–7896 (Q30).",
